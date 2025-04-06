@@ -17,7 +17,6 @@ public class Product {
         this.restaurant = restaurant;
     }
 
-    // Getters and setters
     public int getId() {
         return id;
     }
