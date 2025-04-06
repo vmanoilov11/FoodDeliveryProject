@@ -21,7 +21,6 @@ public class Order {
         this.status = status;
     }
 
-    // Getters and setters
     public int getId() {
         return id;
     }
