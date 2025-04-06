@@ -37,7 +37,7 @@ public class AppConfig {
     }
 
     private void setDefaultProperties() {
-        // Database defaults
+
         properties.setProperty("db.driver", "com.mysql.cj.jdbc.Driver");
         properties.setProperty("db.url", "jdbc:mysql://localhost:3306/food_delivery");
         properties.setProperty("db.username", "root");
