@@ -21,6 +21,8 @@ public class OrderRepository {
 
     public List<Order> getAllOrders() {
         List<Order> orders = new ArrayList<>();
+        List<OrderTemp> tempOrders = new ArrayList<>();
+
         String sql = "SELECT * FROM orders ORDER BY order_date DESC";
 
         try (Connection conn = dbConnection.getConnection();
@@ -28,19 +30,36 @@ public class OrderRepository {
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                Order order = mapResultSetToOrder(rs);
-                orders.add(order);
-            }
+                int id = rs.getInt("id");
+                int userId = rs.getInt("user_id");
+                int restaurantId = rs.getInt("restaurant_id");
+                String status = rs.getString("status");
+                LocalDateTime date = rs.getTimestamp("order_date").toLocalDateTime();
+                BigDecimal total = BigDecimal.ZERO;
 
-            for (Order order : orders) {
-                loadOrderItems(order);
+                tempOrders.add(new OrderTemp(id, userId, restaurantId, status, date, total));
             }
 
         } catch (SQLException e) {
             e.printStackTrace();
+            return orders;
         }
+
+        UserRepository userRepository = new UserRepository();
+        RestaurantRepository restaurantRepository = new RestaurantRepository();
+
+        for (OrderTemp temp : tempOrders) {
+            User user = userRepository.getUserById(temp.userId);
+            Restaurant restaurant = restaurantRepository.getRestaurantById(temp.restaurantId);
+
+            Order order = new Order(temp.id, user, restaurant, new ArrayList<>(), temp.date, temp.status);
+            loadOrderItems(order);
+            orders.add(order);
+        }
+
         return orders;
     }
+
 
     public List<Order> getOrdersByUserId(int userId) {
         List<Order> orders = new ArrayList<>();
@@ -323,6 +342,7 @@ public class OrderRepository {
 
         List<OrderItemRow> tempItems = new ArrayList<>();
 
+        // Step 1: Load all rows from ResultSet into memory
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
@@ -350,6 +370,8 @@ public class OrderRepository {
             order.addOrderItem(item);
         }
     }
+
+
     private static class OrderItemRow {
         int id;
         int orderId;
@@ -361,6 +383,22 @@ public class OrderRepository {
             this.orderId = orderId;
             this.productId = productId;
             this.quantity = quantity;
+        }
+    }
+
+    private static class OrderTemp {
+        int id, userId, restaurantId;
+        String status;
+        LocalDateTime date;
+        BigDecimal total;
+
+        public OrderTemp(int id, int userId, int restaurantId, String status, LocalDateTime date, BigDecimal total) {
+            this.id = id;
+            this.userId = userId;
+            this.restaurantId = restaurantId;
+            this.status = status;
+            this.date = date;
+            this.total = total;
         }
     }
 
