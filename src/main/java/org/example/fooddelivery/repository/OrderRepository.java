@@ -29,9 +29,13 @@ public class OrderRepository {
 
             while (rs.next()) {
                 Order order = mapResultSetToOrder(rs);
-                loadOrderItems(order);
                 orders.add(order);
             }
+
+            for (Order order : orders) {
+                loadOrderItems(order);
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -40,24 +44,47 @@ public class OrderRepository {
 
     public List<Order> getOrdersByUserId(int userId) {
         List<Order> orders = new ArrayList<>();
-        String sql = "SELECT * FROM orders WHERE user_id = ? ORDER BY order_date DESC";
 
+        String sql = "SELECT * FROM orders WHERE user_id = ?";
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, userId);
-            ResultSet rs = stmt.executeQuery();
 
-            while (rs.next()) {
-                Order order = mapResultSetToOrder(rs);
-                loadOrderItems(order);
+            List<Integer> restaurantIds = new ArrayList<>();
+            List<Integer> orderIds = new ArrayList<>();
+            List<LocalDateTime> orderDates = new ArrayList<>();
+            List<String> statuses = new ArrayList<>();
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    orderIds.add(rs.getInt("id"));
+                    restaurantIds.add(rs.getInt("restaurant_id"));
+                    orderDates.add(rs.getTimestamp("order_date").toLocalDateTime());
+                    statuses.add(rs.getString("status"));
+                }
+            }
+
+            User user = new UserRepository().getUserById(userId);
+            RestaurantRepository restaurantRepo = new RestaurantRepository();
+
+            for (int i = 0; i < orderIds.size(); i++) {
+                Restaurant restaurant = restaurantRepo.getRestaurantById(restaurantIds.get(i));
+                Order order = new Order(orderIds.get(i), user, restaurant, new ArrayList<>(), orderDates.get(i), statuses.get(i));
                 orders.add(order);
             }
+
+            for (Order order : orders) {
+                loadOrderItems(order);
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
         return orders;
     }
+
 
     public List<Order> getOrdersByStatus(String status) {
         List<Order> orders = new ArrayList<>();
@@ -71,9 +98,13 @@ public class OrderRepository {
 
             while (rs.next()) {
                 Order order = mapResultSetToOrder(rs);
-                loadOrderItems(order);
                 orders.add(order);
             }
+
+            for (Order order : orders) {
+                loadOrderItems(order);
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -92,9 +123,13 @@ public class OrderRepository {
 
             while (rs.next()) {
                 Order order = mapResultSetToOrder(rs);
-                loadOrderItems(order);
                 orders.add(order);
             }
+
+            for (Order order : orders) {
+                loadOrderItems(order);
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -113,9 +148,13 @@ public class OrderRepository {
 
             while (rs.next()) {
                 Order order = mapResultSetToOrder(rs);
-                loadOrderItems(order);
                 orders.add(order);
             }
+
+            for (Order order : orders) {
+                loadOrderItems(order);
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -135,9 +174,13 @@ public class OrderRepository {
 
             while (rs.next()) {
                 Order order = mapResultSetToOrder(rs);
-                loadOrderItems(order);
                 orders.add(order);
             }
+
+            for (Order order : orders) {
+                loadOrderItems(order);
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -189,18 +232,18 @@ public class OrderRepository {
     public BigDecimal calculateDelivererEarnings(int delivererId) {
         String sql = """
             SELECT COALESCE(SUM(
-                CASE\s
-                    WHEN o.status = 'DELIVERED' THEN\s
-                        (SELECT SUM(p.price * oi.quantity) * 0.1\s
-                         FROM order_items oi\s
-                         JOIN products p ON oi.product_id = p.id\s
+                CASE
+                    WHEN o.status = 'DELIVERED' THEN
+                        (SELECT SUM(p.price * oi.quantity) * 0.1
+                         FROM order_items oi
+                         JOIN products p ON oi.product_id = p.id
                          WHERE oi.order_id = o.id)
-                    ELSE 0\s
+                    ELSE 0
                 END
             ), 0) as total_earnings
             FROM orders o
             WHERE o.deliverer_id = ?
-           \s""";
+           """;
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -260,55 +303,67 @@ public class OrderRepository {
     }
 
     private Order mapResultSetToOrder(ResultSet rs) throws SQLException {
-        // Create instances of repositories to fetch user and restaurant
+        int id = rs.getInt("id");
+        int userId = rs.getInt("user_id");
+        int restaurantId = rs.getInt("restaurant_id");
+        LocalDateTime orderDate = rs.getTimestamp("order_date").toLocalDateTime();
+        String status = rs.getString("status");
+
         UserRepository userRepository = new UserRepository();
         RestaurantRepository restaurantRepository = new RestaurantRepository();
 
-        int userId = rs.getInt("user_id");
         User user = userRepository.getUserById(userId);
-
-        int restaurantId = rs.getInt("restaurant_id");
         Restaurant restaurant = restaurantRepository.getRestaurantById(restaurantId);
 
-        Order order = new Order(
-                rs.getInt("id"),
-                user,
-                restaurant,
-                new ArrayList<>(),
-                rs.getTimestamp("order_date").toLocalDateTime(),
-                rs.getString("status")
-        );
-
-        loadOrderItems(order);
-
-        return order;
+        return new Order(id, user, restaurant, new ArrayList<>(), orderDate, status);
     }
 
     private void loadOrderItems(Order order) {
         String sql = "SELECT * FROM order_items WHERE order_id = ?";
 
+        List<OrderItemRow> tempItems = new ArrayList<>();
+
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, order.getId());
-            ResultSet rs = stmt.executeQuery();
-
+            try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    int productId = rs.getInt("product_id");
-                    Product product = productRepository.getProductById(productId);
-
-                    OrderItem item = new OrderItem(
+                    OrderItemRow row = new OrderItemRow(
                             rs.getInt("id"),
                             rs.getInt("order_id"),
-                            product,
+                            rs.getInt("product_id"),
                             rs.getInt("quantity")
                     );
-                    order.addOrderItem(item);
+                    tempItems.add(row);
                 }
-            } catch (SQLException e) {
+            }
+
+        } catch (SQLException e) {
             e.printStackTrace();
+            return;
+        }
+
+        for (OrderItemRow row : tempItems) {
+            Product product = productRepository.getProductById(row.productId);
+            OrderItem item = new OrderItem(row.id, row.orderId, product, row.quantity);
+            order.addOrderItem(item);
         }
     }
+    private static class OrderItemRow {
+        int id;
+        int orderId;
+        int productId;
+        int quantity;
+
+        public OrderItemRow(int id, int orderId, int productId, int quantity) {
+            this.id = id;
+            this.orderId = orderId;
+            this.productId = productId;
+            this.quantity = quantity;
+        }
+    }
+
 
     private boolean createOrderItems(Order order) {
         String sql = "INSERT INTO order_items (order_id, product_id, quantity) VALUES (?, ?, ?)";
