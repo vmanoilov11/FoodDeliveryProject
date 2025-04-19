@@ -157,6 +157,7 @@ public class OrderRepository {
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
+
                 Order order = mapResultSetToOrder(rs);
                 orders.add(order);
             }
@@ -222,22 +223,30 @@ public class OrderRepository {
 
             stmt.setInt(1, date.getYear());
             stmt.setInt(2, date.getMonthValue());
-            ResultSet rs = stmt.executeQuery();
 
-            while (rs.next()) {
-                Order order = mapResultSetToOrder(rs);
-                orders.add(order);
-            }
+            try (ResultSet rs = stmt.executeQuery()) {
+                List<Order> tempOrders = new ArrayList<>();
 
-            for (Order order : orders) {
-                loadOrderItems(order);
+                while (rs.next()) {
+                    Order order = mapResultSetToOrder(rs);
+                    tempOrders.add(order);
+                }
+
+                for (Order order : tempOrders) {
+                    loadOrderItems(order);
+                }
+
+                orders.addAll(tempOrders);
             }
 
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
         return orders;
     }
+
+
 
     public boolean createOrder(Order order) {
         String sql = "INSERT INTO orders (user_id, restaurant_id, status, order_date) VALUES (?, ?, ?, ?)";
@@ -271,7 +280,7 @@ public class OrderRepository {
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, status);
+            stmt.setString(1, "IN_PROGRESS");
             stmt.setInt(2, orderId);
 
             return stmt.executeUpdate() > 0;
@@ -405,7 +414,7 @@ public class OrderRepository {
         }
     }
 
-    // Helper class to hold raw data
+    
     private static class OrderItemRow {
         int id;
         int orderId;
