@@ -107,28 +107,44 @@ public class OrderRepository {
 
     public List<Order> getOrdersByStatus(String status) {
         List<Order> orders = new ArrayList<>();
+        List<OrderTemp> tempOrders = new ArrayList<>();
         String sql = "SELECT * FROM orders WHERE status = ? ORDER BY order_date DESC";
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, status);
-            ResultSet rs = stmt.executeQuery();
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int id = rs.getInt("id");
+                    int userId = rs.getInt("user_id");
+                    int restaurantId = rs.getInt("restaurant_id");
+                    LocalDateTime orderDate = rs.getTimestamp("order_date").toLocalDateTime();
 
-            while (rs.next()) {
-                Order order = mapResultSetToOrder(rs);
-                orders.add(order);
-            }
-
-            for (Order order : orders) {
-                loadOrderItems(order);
+                    tempOrders.add(new OrderTemp(id, userId, restaurantId, status, orderDate, BigDecimal.ZERO));
+                }
             }
 
         } catch (SQLException e) {
             e.printStackTrace();
+            return orders;
         }
+
+        UserRepository userRepository = new UserRepository();
+        RestaurantRepository restaurantRepository = new RestaurantRepository();
+
+        for (OrderTemp temp : tempOrders) {
+            User user = userRepository.getUserById(temp.userId);
+            Restaurant restaurant = restaurantRepository.getRestaurantById(temp.restaurantId);
+
+            Order order = new Order(temp.id, user, restaurant, new ArrayList<>(), temp.date, temp.status);
+            loadOrderItems(order);
+            orders.add(order);
+        }
+
         return orders;
     }
+
 
     public List<Order> getDeliveriesByDelivererId(int delivererId) {
         List<Order> orders = new ArrayList<>();
@@ -157,28 +173,45 @@ public class OrderRepository {
 
     public List<Order> getOrdersByDate(LocalDate date) {
         List<Order> orders = new ArrayList<>();
+        List<OrderTemp> tempOrders = new ArrayList<>();
         String sql = "SELECT * FROM orders WHERE DATE(order_date) = ? ORDER BY order_date DESC";
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setDate(1, Date.valueOf(date));
-            ResultSet rs = stmt.executeQuery();
+            stmt.setDate(1, java.sql.Date.valueOf(date));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int id = rs.getInt("id");
+                    int userId = rs.getInt("user_id");
+                    int restaurantId = rs.getInt("restaurant_id");
+                    String status = rs.getString("status");
+                    LocalDateTime orderDate = rs.getTimestamp("order_date").toLocalDateTime();
 
-            while (rs.next()) {
-                Order order = mapResultSetToOrder(rs);
-                orders.add(order);
-            }
-
-            for (Order order : orders) {
-                loadOrderItems(order);
+                    tempOrders.add(new OrderTemp(id, userId, restaurantId, status, orderDate, BigDecimal.ZERO));
+                }
             }
 
         } catch (SQLException e) {
             e.printStackTrace();
+            return orders;
         }
+
+        UserRepository userRepository = new UserRepository();
+        RestaurantRepository restaurantRepository = new RestaurantRepository();
+
+        for (OrderTemp temp : tempOrders) {
+            User user = userRepository.getUserById(temp.userId);
+            Restaurant restaurant = restaurantRepository.getRestaurantById(temp.restaurantId);
+
+            Order order = new Order(temp.id, user, restaurant, new ArrayList<>(), temp.date, temp.status);
+            loadOrderItems(order);
+            orders.add(order);
+        }
+
         return orders;
     }
+
 
     public List<Order> getOrdersByMonth(LocalDate date) {
         List<Order> orders = new ArrayList<>();
@@ -364,6 +397,7 @@ public class OrderRepository {
             return;
         }
 
+        // Step 2: Use the extracted data to create actual OrderItem objects
         for (OrderItemRow row : tempItems) {
             Product product = productRepository.getProductById(row.productId);
             OrderItem item = new OrderItem(row.id, row.orderId, product, row.quantity);
@@ -371,7 +405,7 @@ public class OrderRepository {
         }
     }
 
-
+    // Helper class to hold raw data
     private static class OrderItemRow {
         int id;
         int orderId;
