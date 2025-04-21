@@ -9,6 +9,8 @@ public class Product {
     private BigDecimal price;
     private Restaurant restaurant;
 
+
+
     public Product(int id, String name, BigDecimal price, String description, Restaurant restaurant) {
         this.id = id;
         this.name = name;
@@ -17,6 +19,7 @@ public class Product {
         this.restaurant = restaurant;
     }
 
+    // Getters and setters
     public int getId() {
         return id;
     }
