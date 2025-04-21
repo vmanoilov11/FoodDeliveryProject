@@ -29,7 +29,7 @@ public class UserRepository {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return null;  // Return null if no user is found
+        return null;
     }
 
 
@@ -43,8 +43,8 @@ public class UserRepository {
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
-                String storedPassword = rs.getString("password");  // Now we don't hash the password
-                if (password.equals(storedPassword)) {  // Direct comparison without hashing
+                String storedPassword = rs.getString("password");
+                if (password.equals(storedPassword)) {
                     return mapResultSetToUser(rs);
                 }
             }
@@ -61,7 +61,7 @@ public class UserRepository {
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setString(1, user.getUsername());
-            stmt.setString(2, user.getPassword());  // Store plain password (without hashing)
+            stmt.setString(2, user.getPassword());  
             stmt.setString(3, user.getRole().toString());
 
             int affectedRows = stmt.executeUpdate();
@@ -84,7 +84,7 @@ public class UserRepository {
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, newPassword);  // Store plain password (without hashing)
+            stmt.setString(1, newPassword);  
             stmt.setInt(2, userId);
 
             return stmt.executeUpdate() > 0;
@@ -112,7 +112,7 @@ public class UserRepository {
         return new User(
                 rs.getInt("id"),
                 rs.getString("username"),
-                rs.getString("password"),  // Plain password
+                rs.getString("password"),  
                 User.UserRole.valueOf(rs.getString("role"))
         );
     }
