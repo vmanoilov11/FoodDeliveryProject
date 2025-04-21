@@ -21,6 +21,9 @@ public class Order {
         this.status = status;
     }
 
+
+
+    // Getters and setters
     public int getId() {
         return id;
     }
@@ -28,26 +31,16 @@ public class Order {
         this.id = id;
     }
 
-    public User getUser() {
-        return user;
-    }
-    public void setUser(User user) {
-        this.user = user;
+    public int getUserId() {
+        return user.getId();
     }
 
-    public int getUserId() {
-        return user != null ? user.getId() : 0;
+    public int getRestaurantId() {
+        return restaurant.getId();
     }
 
     public Restaurant getRestaurant() {
         return restaurant;
-    }
-    public void setRestaurant(Restaurant restaurant) {
-        this.restaurant = restaurant;
-    }
-
-    public int getRestaurantId() {
-        return restaurant != null ? restaurant.getId() : 0;
     }
 
     public String getStatus() {
@@ -86,6 +79,23 @@ public class Order {
 
     @Override
     public String toString() {
-        return String.format("Order #%d (%s) - %s", id, status, restaurant != null ? restaurant.getName() : "Unknown Restaurant");
+        return String.format("Order #%d (%s) - Restaurant ID: %d", id, status, restaurant.getId());
+    }
+
+    public Restaurant getRestaurant(List<Restaurant> allRestaurants) {
+        for (Restaurant restaurant : allRestaurants) {
+            if (restaurant.getId() == this.restaurant.getId()) {
+                return restaurant;
+            }
+        }
+        return null;
+    }
+
+    public List<OrderItem> getOrderItems() {
+        return items;
+    }
+
+    public User getUser() {
+        return user;
     }
 }
