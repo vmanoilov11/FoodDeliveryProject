@@ -18,7 +18,11 @@ public class ProductRepository {
 
     public List<Product> getAllProducts() {
         List<Product> products = new ArrayList<>();
-        String sql = "SELECT * FROM products";
+        String sql = """
+        SELECT p.*, r.id as restaurant_id, r.name as restaurant_name
+        FROM products p
+        LEFT JOIN restaurants r ON p.restaurant_id = r.id
+        """;
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
@@ -53,7 +57,12 @@ public class ProductRepository {
     }
 
     public Product getProductById(int id) {
-        String sql = "SELECT * FROM products WHERE id = ?";
+        String sql = """
+        SELECT p.*, r.id as restaurant_id, r.name as restaurant_name
+        FROM products p
+        LEFT JOIN restaurants r ON p.restaurant_id = r.id
+        WHERE p.id = ?
+    """;
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -69,6 +78,7 @@ public class ProductRepository {
         }
         return null;
     }
+
 
     public boolean createProduct(Product product) {
         String sql = "INSERT INTO products (name, description, price, restaurant_id) VALUES (?, ?, ?, ?)";
@@ -104,7 +114,7 @@ public class ProductRepository {
             stmt.setString(1, product.getName());
             stmt.setString(2, product.getDescription());
             stmt.setBigDecimal(3, product.getPrice());
-            stmt.setInt(4, product.getRestaurantId());
+            stmt.setInt(4, product.getRestaurant().getId());
             stmt.setInt(5, product.getId());
 
             return stmt.executeUpdate() > 0;
@@ -131,13 +141,15 @@ public class ProductRepository {
     public List<Product> getPopularProducts() {
         List<Product> products = new ArrayList<>();
         String sql = """
-            SELECT p.*, COUNT(oi.product_id) as order_count 
-            FROM products p 
-            LEFT JOIN order_items oi ON p.id = oi.product_id 
-            GROUP BY p.id 
-            ORDER BY order_count DESC 
-            LIMIT 10
-            """;
+        SELECT p.*, r.name AS restaurant_name
+        FROM products p
+        LEFT JOIN restaurants r ON p.restaurant_id = r.id
+        LEFT JOIN order_items oi ON p.id = oi.product_id
+        GROUP BY p.id
+        ORDER BY COUNT(oi.product_id) DESC
+        LIMIT 10
+        """;
+
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
@@ -153,16 +165,16 @@ public class ProductRepository {
     }
 
     private Product mapResultSetToProduct(ResultSet rs) throws SQLException {
-        Restaurant restaurant = new Restaurant();
-        restaurant.setId(rs.getInt("restaurant_id")); 
+        int productId = rs.getInt("id");
+        String name = rs.getString("name");
+        String description = rs.getString("description");
+        BigDecimal price = rs.getBigDecimal("price");
 
-        return new Product(
-                rs.getInt("id"),
-                rs.getString("name"),
-                rs.getBigDecimal("price"),
-                rs.getString("description"),
-                restaurant
-        );
+        int restaurantId = rs.getInt("restaurant_id");
+        String restaurantName = rs.getString("restaurant_name");
+        Restaurant restaurant = new Restaurant(restaurantId, restaurantName, null, null);
+
+        return new Product(productId, name, price, description, restaurant);
     }
 
 
