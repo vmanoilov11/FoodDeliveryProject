@@ -16,7 +16,7 @@ public class ConsoleUtils {
         System.out.println("=".repeat(50) + "\n");
     }
 
-    public static void printMenu(String[] options) {
+    public static void printMenu(String... options) {
         for (int i = 0; i < options.length; i++) {
             System.out.printf("%d. %s%n", i + 1, options[i]);
         }
@@ -63,17 +63,12 @@ public class ConsoleUtils {
     }
 
     public static void printTableHeader(String... columns) {
-        int[] columnWidths = new int[columns.length];
-        for (int i = 0; i < columns.length; i++) {
-            columnWidths[i] = columns[i].length();
-        }
-
         StringBuilder separator = new StringBuilder("+");
         StringBuilder header = new StringBuilder("|");
 
-        for (int i = 0; i < columns.length; i++) {
-            separator.append("-".repeat(columnWidths[i] + 2)).append("+");
-            header.append(String.format(" %-" + (columnWidths[i]) + "s |", columns[i]));
+        for (String column : columns) {
+            separator.append("-".repeat(30 + 2)).append("+");
+            header.append(String.format(" %-" + 30 + "s |", column));
         }
 
         System.out.println(separator);
@@ -81,20 +76,32 @@ public class ConsoleUtils {
         System.out.println(separator);
     }
 
+
     public static void printTableRow(String... values) {
         StringBuilder row = new StringBuilder("|");
         for (String value : values) {
-            row.append(String.format(" %-18s |", value));
+            row.append(String.format(" %-30s |", value));
         }
         System.out.println(row);
     }
 
     public static void printTableFooter(String... columns) {
         StringBuilder separator = new StringBuilder("+");
-        for (String column : columns) {
-            separator.append("-".repeat(column.length() + 2)).append("+"); // Adjust width per column
+        for (int i = 0; i < columns.length; i++) {
+            separator.append("-".repeat(32)).append("+");
         }
         System.out.println(separator);
+    }
+
+
+
+
+    public static void printSuccess(String message) {
+        System.out.println("\n✓ " + message);
+    }
+
+    public static void printError(String message) {
+        System.out.println("\n✗ " + message);
     }
 
 }
