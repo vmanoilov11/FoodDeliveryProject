@@ -39,7 +39,12 @@ public class ProductRepository {
 
     public List<Product> getProductsByRestaurantId(int restaurantId) {
         List<Product> products = new ArrayList<>();
-        String sql = "SELECT * FROM products WHERE restaurant_id = ?";
+        String sql = """
+    SELECT p.*, r.name as restaurant_name
+    FROM products p
+    LEFT JOIN restaurants r ON p.restaurant_id = r.id
+    WHERE p.restaurant_id = ?
+        """;
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -137,6 +142,7 @@ public class ProductRepository {
         }
         return false;
     }
+
 
     public List<Product> getPopularProducts() {
         List<Product> products = new ArrayList<>();
