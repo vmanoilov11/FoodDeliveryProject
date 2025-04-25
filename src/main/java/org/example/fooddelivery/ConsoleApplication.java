@@ -244,15 +244,13 @@ public class ConsoleApplication {
                 break;
             }
 
-            int productId = ConsoleUtils.readChoice(1, products.size());
+            int selectedIndex = ConsoleUtils.readChoice(1, products.size());
             int quantity = ConsoleUtils.readChoice(1, 10);
 
-            Product product = productRepository.getProductById(productId);
-            if (product != null) {
-                orderItems.add(new OrderItem(0,0, product, quantity));
-            }
-
+            Product product = products.get(selectedIndex - 1);
+            orderItems.add(new OrderItem(0, 0, product, quantity));
         }
+
 
         if (orderItems.isEmpty()) {
             ConsoleUtils.printError("Order must contain at least one item!");
@@ -428,7 +426,7 @@ public class ConsoleApplication {
             int selectedIndex = ConsoleUtils.readChoice(1, orders.size());
             Order selectedOrder = orders.get(selectedIndex - 1);
 
-            if (orderRepository.updateOrderStatus(selectedOrder.getId(), "IN_PROGRESS", currentUser.getId())) {
+            if (orderRepository.updateOrderStatus(selectedOrder.getId(), "DELIVERED", currentUser.getId())) {
                 ConsoleUtils.printSuccess("Order accepted successfully!");
             } else {
                 ConsoleUtils.printError("Failed to accept order!");
